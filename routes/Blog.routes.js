@@ -9,5 +9,4 @@ router.route("/v1")
 router.route("/v1/:id").put(updateBlog).delete(deleteBlog)
 
 
-
 module.exports = router
