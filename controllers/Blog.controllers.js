@@ -42,9 +42,61 @@ const createBlog = async (req, res) => {
     }
 };
 
+const updateBlog = async(req,res) => {
+    try {
+        const { title, content, isActive } = req.body;
+        const id = req.params.id;
+
+        if (!title || !content) {
+            return res.status(400).json({ error: "Title and Content are required" });
+        }
+
+        const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
+            title,
+            content,
+            isActive
+        }, { new: true });
+
+        if (!updatedBlog) {
+            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
+        }
+
+        await updatedBlog.save();
+
+        return res.status(200).json(updatedBlog);
+    } catch (err) {
+        return res.status(statusList.internalServerError.value).json({ error: "Server error", message : err.message });
+    }
+}
+
+const deleteBlog = async(req,res) => {
+    try {
+        const id = req.params.id;
+
+        const blog = await BlogPost.findById(id);
+
+        if (!blog) {
+            return res.status(404).json({ error: "Blog not found" });
+        }
+
+        if (blog.imageUrl) {
+            const public_id = blog.imageUrl.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(public_id);
+        }
+
+        await BlogPost.findByIdAndDelete(id);
+
+        return res.status(statusList.statusOK.value).json({ message: "Blog deleted successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(statusList.internalServerError.value).json({ error: "Server error", message : err.message });
+    }
+}
 
 
 
 module.exports = {
-    createBlog
+    createBlog,
+    updateBlog,
+    deleteBlog
 }
