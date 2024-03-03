@@ -23,7 +23,7 @@ const blogPostSchema = mongoose.Schema({
             type : String,
             required : true
         },
-        asset_id : {
+        public_id : {
             type : String,
             required : true
         }

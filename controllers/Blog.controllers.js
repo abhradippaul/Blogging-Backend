@@ -1,17 +1,16 @@
 const statusList = require("../BackendStatus.js");
 const BlogPost = require("../models/Blog.models.js");
-const { uploadCloudinary } = require("../utlis/Cloudinary.js");
+const { uploadCloudinary, deleteCloudinary } = require("../utlis/Cloudinary.js");
 const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
     const imageData = req.file.path
-    console.log(imageData)
     if (!title || !slug || !content) {
         return res.status(400).json({ error: 'Title, slug, and content are required' });
     }
     try {
         const cloudinaryResponse = await uploadCloudinary(imageData)
-        console.log(cloudinaryResponse)
-        if (!cloudinaryResponse.secure_url || !cloudinaryResponse.asset_id) {
+
+        if (!cloudinaryResponse.secure_url || !cloudinaryResponse.public_id) {
             return await res.status(statusList.noContent.value).json({
                 error: statusList.noContent.name,
                 message: "Problem occured in cloudinary"
@@ -24,7 +23,7 @@ const createBlog = async (req, res) => {
             isActive: isActive,
             featuredImage: {
                 url: cloudinaryResponse.secure_url,
-                asset_id : cloudinaryResponse.asset_id
+                public_id : cloudinaryResponse.public_id
             }
         });
 
@@ -45,7 +44,7 @@ const createBlog = async (req, res) => {
 const updateBlog = async(req,res) => {
     try {
         const { title, content, isActive } = req.body;
-        const id = req.params.id;
+        const {id} = req.params;
 
         if (!title || !content) {
             return res.status(400).json({ error: "Title and Content are required" });
@@ -61,7 +60,6 @@ const updateBlog = async(req,res) => {
             return res.status(statusList.notFound.value).json({ error: "Blog not found" });
         }
 
-        await updatedBlog.save();
 
         return res.status(200).json(updatedBlog);
     } catch (err) {
@@ -71,20 +69,33 @@ const updateBlog = async(req,res) => {
 
 const deleteBlog = async(req,res) => {
     try {
-        const id = req.params.id;
+        const {id} = req.params;
 
         const blog = await BlogPost.findById(id);
 
         if (!blog) {
-            return res.status(404).json({ error: "Blog not found" });
+            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
         }
 
-        if (blog.imageUrl) {
-            const public_id = blog.imageUrl.split('/').pop().split('.')[0];
-            await cloudinary.uploader.destroy(public_id);
+        if(!blog.featuredImage.url || !blog.featuredImage.public_id) {
+            return res.status(statusList.notFound.value).json({
+                message : "Blog not found"
+            })
+        }
+        const isDelete = await deleteCloudinary(blog.featuredImage.public_id);
+        if(!isDelete) {
+            return res.status(statusList.internalServerError.value).json({
+                message : "Cloudinary delete error"
+            })
         }
 
-        await BlogPost.findByIdAndDelete(id);
+        const isDeleteDatabase = await BlogPost.findByIdAndDelete(id);
+
+        if(!isDeleteDatabase) {
+            return res.status(statusList.badRequest.value).json({
+                message : "Error in deleting database"
+            })
+        }
 
         return res.status(statusList.statusOK.value).json({ message: "Blog deleted successfully" });
     } catch (err) {
@@ -93,10 +104,24 @@ const deleteBlog = async(req,res) => {
     }
 }
 
+const getAllBlogs = async (req, res) => {
+    try {
+        const blogs = await BlogPost.find();
+        if (!blogs) {
+            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
+        }
+        return res.status(statusList.statusOK).json(blogs);
+        
+    } catch (err) {
+        return res.status(statusList.internalServerError.value).json({ err: err.message });        
+    }
+}
+
 
 
 module.exports = {
     createBlog,
     updateBlog,
-    deleteBlog
+    deleteBlog,
+    getAllBlogs
 }

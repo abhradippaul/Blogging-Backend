@@ -15,7 +15,6 @@ const uploadCloudinary = async (imageData) => {
     }
     try {
         const cloudinaryResponse  = await cloudinary.uploader.upload(imageData)
-        // console.log(cloudinaryResponse)
         fs.unlinkSync(imageData)
         return cloudinaryResponse
     } catch (err) {
@@ -25,6 +24,16 @@ const uploadCloudinary = async (imageData) => {
 
 }
 
+const deleteCloudinary = async (public_id) => {
+    try {
+        const cloudinaryResponse  = await cloudinary.api.delete_resources([public_id])
+        return cloudinaryResponse
+    } catch (err) {
+        return null
+    }
+}
+
 module.exports = {
-    uploadCloudinary
+    uploadCloudinary,
+    deleteCloudinary
 }

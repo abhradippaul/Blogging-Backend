@@ -7,6 +7,7 @@ router.route("/v1")
     .post(upload.single("imageData"), createBlog)
 
 router.route("/v1/:id").put(updateBlog).delete(deleteBlog)
+router.route("/v1/getall").get()
 
 
 module.exports = router

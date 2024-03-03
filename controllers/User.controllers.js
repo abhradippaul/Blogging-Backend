@@ -1,7 +1,7 @@
 const statusList = require("../BackendStatus.js");
 const User = require("../models/User.models.js");
 const bcrypt = require('bcrypt');
-const { generateAccessToken } = require("../utlis/JwtTokens.js");
+const { generateAccessToken,generateRefreshToken } = require("../utlis/JwtTokens.js");
 const cookieSetting = { httpOnly: true, secure: true }
 
 const createUser = async (req, res) => {
@@ -26,7 +26,7 @@ const createUser = async (req, res) => {
       })
     }
 
-    res.status(statusList.created).json({ message: 'User created successfully', user: newUser });
+    res.status(statusList.created.value).json({ message: 'User created successfully', user });
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(statusList.internalServerError.value).json({ error: 'Error creating user' });
@@ -61,6 +61,7 @@ const userLogin = async (req, res) => {
       .cookie("access_token", accessToken, cookieSetting)
       .cookie("refresh_token", refreshToken, cookieSetting)
       .json({ accessToken, refreshToken });
+
   } catch (error) {
     console.error('Error in user login:', error);
     res.status(statusList.internalServerError.value).json({ message: 'Internal server error' });
