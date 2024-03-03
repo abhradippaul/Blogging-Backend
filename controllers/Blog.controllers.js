@@ -110,7 +110,24 @@ const getAllBlogs = async (req, res) => {
         if (!blogs) {
             return res.status(statusList.notFound.value).json({ error: "Blog not found" });
         }
-        return res.status(statusList.statusOK).json(blogs);
+        return res.status(statusList.statusOK.value).json(blogs);
+        
+    } catch (err) {
+        return res.status(statusList.internalServerError.value).json({ err: err.message });        
+    }
+}
+
+const getBlog = async (req, res) => {
+    try {
+        const {id} = req.params;
+        if(!id) {
+            return res.status(statusList.badRequest.value).json({ err: "Id is missing" });
+        }
+        const blog = await BlogPost.findById(id);
+        if (!blog) {
+            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
+        }
+        return res.status(statusList.statusOK.value).json(blog);
         
     } catch (err) {
         return res.status(statusList.internalServerError.value).json({ err: err.message });        
@@ -123,5 +140,6 @@ module.exports = {
     createBlog,
     updateBlog,
     deleteBlog,
-    getAllBlogs
+    getAllBlogs,
+    getBlog
 }

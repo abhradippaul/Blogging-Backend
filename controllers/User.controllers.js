@@ -41,13 +41,13 @@ const userLogin = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(statusList.notFound).json({ message: 'User not found' });
+      return res.status(statusList.notFound.value).json({ message: 'User not found' });
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
-      return res.status(statusList.unauthorized.value).json({ message: 'Incorrect password' });
+      return res.status(statusList.unauthorized.value).json({ message: 'User not found' });
     }
 
     const accessToken = generateAccessToken(user._id)
@@ -69,7 +69,19 @@ const userLogin = async (req, res) => {
 
 }
 
+const userLogout = (req, res) => {
+  try {
+    res.clearCookie("access_token")
+    res.clearCookie("refresh_token")
+    res.status(statusList.statusOK.value).json({ message: 'User logged out successfully' });
+  } catch (error) {
+    console.error('Error in user logout:', error);
+    res.status(statusList.internalServerError.value).json({ message: 'Internal server error' });
+  }
+}
+
 module.exports = {
   createUser,
-  userLogin
+  userLogin,
+  userLogout
 }
