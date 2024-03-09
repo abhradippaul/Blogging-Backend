@@ -15,9 +15,11 @@ const uploadCloudinary = async (imageData) => {
     }
     try {
         const cloudinaryResponse  = await cloudinary.uploader.upload(imageData)
+        // console.log(cloudinaryResponse)
         fs.unlinkSync(imageData)
         return cloudinaryResponse
     } catch (err) {
+        // console.log(err.message)
         fs.unlinkSync(imageData)
         return null
     }

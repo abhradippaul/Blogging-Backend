@@ -6,6 +6,24 @@ const userSchema = new Schema({
         type: String,
         required: true
     },
+    description: {
+        type: String
+    },
+    userName : {
+        type: String,
+        required: true,
+        unique: true
+    },
+    featuredImage : {
+        url : {
+            type : String,
+            required : true
+        },
+        public_id : {
+            type : String,
+            required : true
+        }
+    },
     email: {
         type: String,
         required: true,

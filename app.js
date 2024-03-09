@@ -9,8 +9,8 @@ app.use(express.urlencoded({ extended : true}))
 app.use(express.json())
 app.use(cors())
 app.use(cookieParser())
-app.use("/blog",blogRouter)
-app.use("/user",userRouter)
+app.use("/api/v1/blog",blogRouter)
+app.use("/api/v1/user",userRouter)
 
 
 module.exports = app

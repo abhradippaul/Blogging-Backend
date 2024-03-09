@@ -1,18 +1,27 @@
-const statusList = require("../BackendStatus.js");
+
 const BlogPost = require("../models/Blog.models.js");
 const { uploadCloudinary, deleteCloudinary } = require("../utlis/Cloudinary.js");
+
 const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
+    const {owner} = req.user
+    
+    if(!owner){
+        return res.status(401)
+        .json({error: "You are not authorized to perform this action"})
+    }
+    // console.log(req.user);
     const imageData = req.file.path
-    if (!title || !slug || !content) {
+    
+    if (!title ||!slug ||!content ) {
         return res.status(400).json({ error: 'Title, slug, and content are required' });
     }
     try {
         const cloudinaryResponse = await uploadCloudinary(imageData)
 
         if (!cloudinaryResponse.secure_url || !cloudinaryResponse.public_id) {
-            return await res.status(statusList.noContent.value).json({
-                error: statusList.noContent.name,
+            return await res.status(400)
+            .json({
                 message: "Problem occured in cloudinary"
             })
         }
@@ -20,6 +29,7 @@ const createBlog = async (req, res) => {
             title,
             slug,
             content,
+            owner,
             isActive: isActive,
             featuredImage: {
                 url: cloudinaryResponse.secure_url,
@@ -28,9 +38,11 @@ const createBlog = async (req, res) => {
         });
 
         if (!newBlogPost) {
-            return res.status(statusList.internalServerError.value).json({ message: statusList.internalServerError.name });
+            return res.status(500).json({ message: "Internal server error" });
         }
-        return res.status(statusList.created.value).json({ message: 'Blog post created successfully', data: newBlogPost });
+
+        return res.status(201)
+        .json({ message: 'Blog post created successfully', data: newBlogPost });
 
     } catch (err) {
         return res.status(500)
@@ -47,7 +59,8 @@ const updateBlog = async(req,res) => {
         const {id} = req.params;
 
         if (!title || !content) {
-            return res.status(400).json({ error: "Title and Content are required" });
+            return res.status(400)
+            .json({ error: "Title and Content are required" });
         }
 
         const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
@@ -57,13 +70,16 @@ const updateBlog = async(req,res) => {
         }, { new: true });
 
         if (!updatedBlog) {
-            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
+            return res.status(404)
+            .json({ error: "Blog not found" });
         }
 
 
-        return res.status(200).json(updatedBlog);
+        return res.status(200)
+        .json(updatedBlog);
     } catch (err) {
-        return res.status(statusList.internalServerError.value).json({ error: "Server error", message : err.message });
+        return res.status(500)
+        .json({ error: "Internal server error" });
     }
 }
 
@@ -73,64 +89,76 @@ const deleteBlog = async(req,res) => {
 
         const blog = await BlogPost.findById(id);
 
-        if (!blog) {
-            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
-        }
+        // if (!blog) {
+        //     return res.status(404)
+        //     .json({ error: "Blog not found" });
+        // }
 
         if(!blog.featuredImage.url || !blog.featuredImage.public_id) {
-            return res.status(statusList.notFound.value).json({
-                message : "Blog not found"
-            })
+            return res.status(404)
+            .json({ message : "Blog not found" })
         }
+
         const isDelete = await deleteCloudinary(blog.featuredImage.public_id);
+
         if(!isDelete) {
-            return res.status(statusList.internalServerError.value).json({
-                message : "Cloudinary delete error"
-            })
+            return res.status(500)
+            .json({ message : "Cloudinary delete error" })
         }
 
         const isDeleteDatabase = await BlogPost.findByIdAndDelete(id);
 
         if(!isDeleteDatabase) {
-            return res.status(statusList.badRequest.value).json({
+            return res.status(400)
+            .json({
                 message : "Error in deleting database"
             })
         }
 
-        return res.status(statusList.statusOK.value).json({ message: "Blog deleted successfully" });
+        return res.status(200)
+        .json({ message: "Blog deleted successfully" });
+
     } catch (err) {
         console.error(err);
-        res.status(statusList.internalServerError.value).json({ error: "Server error", message : err.message });
+        res.status(500)
+        .json({ error: "Internal server error"});
     }
 }
 
 const getAllBlogs = async (req, res) => {
     try {
         const blogs = await BlogPost.find();
+
         if (!blogs) {
-            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
+            return res.status(400).json({ error: "Blog not found" });
         }
-        return res.status(statusList.statusOK.value).json(blogs);
+        return res.status(200).json(blogs);
         
     } catch (err) {
-        return res.status(statusList.internalServerError.value).json({ err: err.message });        
+        return res.status(500)
+        .json({ message : "Internal server error" });        
     }
 }
 
 const getBlog = async (req, res) => {
     try {
         const {id} = req.params;
+
         if(!id) {
-            return res.status(statusList.badRequest.value).json({ err: "Id is missing" });
+            return res.status(400)
+            .json({ err: "Id is missing" });
         }
         const blog = await BlogPost.findById(id);
         if (!blog) {
-            return res.status(statusList.notFound.value).json({ error: "Blog not found" });
+            return res.status(402)
+            .json({ error: "Blog not found" });
         }
-        return res.status(statusList.statusOK.value).json(blog);
+
+        return res.status(200).json(blog);
         
     } catch (err) {
-        return res.status(statusList.internalServerError.value).json({ err: err.message });        
+        return res.status(500)
+        .json({ message : "Internal server error" });        
     }
 }
 

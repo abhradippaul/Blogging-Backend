@@ -28,11 +28,10 @@ const blogPostSchema = mongoose.Schema({
             required : true
         }
     },
-    // owner: {
-    //     type: Schema.Types.ObjectId,
-    //     ref: 'User', // Assuming there's a User model
-    //     required: true
-    // }
+    owner: {
+        type: String,
+        required: true
+    }
 },{timestamps : true});
 
 

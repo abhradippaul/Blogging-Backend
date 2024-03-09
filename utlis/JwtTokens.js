@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
 const secretKey = process.env.SECRET_KEY
 
-const generateAccessToken = (_id) => {
+const generateAccessToken = (_id,owner) => {
     try {
         const payload = {
-            _id
+            _id,
+            owner
         };
         const options = {
             expiresIn: '15m', 
@@ -15,10 +16,11 @@ const generateAccessToken = (_id) => {
         return null
     }
 }
-const generateRefreshToken = (_id) => {
+const generateRefreshToken = (_id,owner) => {
     try {
         const payload = {
-            _id
+            _id,
+            owner
         };
         const options = {
             expiresIn: '7d',
