@@ -9,12 +9,14 @@ cloudinary.config({
 });
 
 
-const uploadCloudinary = async (imageData) => {
+const uploadCloudinary = async (imageData,folderName) => {
     if(!imageData) {
         return null
     }
     try {
-        const cloudinaryResponse  = await cloudinary.uploader.upload(imageData)
+        const cloudinaryResponse  = await cloudinary.uploader.upload(imageData,{
+            folder: folderName
+        })
         // console.log(cloudinaryResponse)
         fs.unlinkSync(imageData)
         return cloudinaryResponse

@@ -29,8 +29,8 @@ const blogPostSchema = mongoose.Schema({
         }
     },
     owner: {
-        type: String,
-        required: true
+        type : mongoose.Schema.Types.ObjectId,
+        ref : 'User'
     }
 },{timestamps : true});
 

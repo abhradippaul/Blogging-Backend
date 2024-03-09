@@ -4,36 +4,36 @@ const { uploadCloudinary, deleteCloudinary } = require("../utlis/Cloudinary.js")
 
 const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
-    const {owner} = req.user
-    
-    if(!owner){
-        return res.status(401)
-        .json({error: "You are not authorized to perform this action"})
-    }
-    // console.log(req.user);
-    const imageData = req.file.path
-    
-    if (!title ||!slug ||!content ) {
-        return res.status(400).json({ error: 'Title, slug, and content are required' });
-    }
+    const { owner } = req.user
     try {
-        const cloudinaryResponse = await uploadCloudinary(imageData)
+
+        if (!owner) {
+            return res.status(401)
+                .json({ error: "You are not authorized to perform this action" })
+        }
+        // console.log(req.user);
+        const imageData = req.file.path
+
+        if (!title || !slug || !content) {
+            return res.status(400).json({ error: 'Title, slug, and content are required' });
+        }
+
+        const cloudinaryResponse = await uploadCloudinary(imageData, "blog_folder")
 
         if (!cloudinaryResponse.secure_url || !cloudinaryResponse.public_id) {
             return await res.status(400)
-            .json({
-                message: "Problem occured in cloudinary"
-            })
+                .json({
+                    message: "Problem occured in cloudinary"
+                })
         }
         const newBlogPost = await BlogPost.create({
             title,
             slug,
             content,
-            owner,
             isActive: isActive,
             featuredImage: {
                 url: cloudinaryResponse.secure_url,
-                public_id : cloudinaryResponse.public_id
+                public_id: cloudinaryResponse.public_id
             }
         });
 
@@ -42,7 +42,7 @@ const createBlog = async (req, res) => {
         }
 
         return res.status(201)
-        .json({ message: 'Blog post created successfully', data: newBlogPost });
+            .json({ message: 'Blog post created successfully', data: newBlogPost });
 
     } catch (err) {
         return res.status(500)
@@ -53,39 +53,104 @@ const createBlog = async (req, res) => {
     }
 };
 
-const updateBlog = async(req,res) => {
+const updateBlog = async (req, res) => {
     try {
-        const { title, content, isActive } = req.body;
-        const {id} = req.params;
+        const updatedData = req.body;
+        const { id } = req.params;
 
-        if (!title || !content) {
+        if (updatedData.slug || updatedData.file ) {
             return res.status(400)
-            .json({ error: "Title and Content are required" });
+                .json({ error: "Slug cannot be updated" });
         }
 
         const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
-            title,
-            content,
-            isActive
+            ...updatedData
         }, { new: true });
 
         if (!updatedBlog) {
             return res.status(404)
-            .json({ error: "Blog not found" });
+                .json({ error: "Blog not found" });
         }
 
 
         return res.status(200)
-        .json(updatedBlog);
+            .json({
+                message : "Success",
+                data : {
+                    url : updatedBlog.featuredImage.url,
+                    title : updatedBlog.title,
+                    content : updatedBlog.content,
+                    isActive : updatedBlog.isActive
+                }
+            });
     } catch (err) {
         return res.status(500)
-        .json({ error: "Internal server error" });
+            .json({ error: "Internal server error", message: err.message });
     }
 }
 
-const deleteBlog = async(req,res) => {
+const updateBlogImage = async(req, res) => {
     try {
-        const {id} = req.params;
+        const { id } = req.params;
+        const imageData = req.file
+
+        if (!id || !imageData) {
+            return res.status(400)
+            .json({ error: "Id or path is missing" });
+        }
+
+        const blog = await BlogPost.findById(id);
+        if (!blog) {
+            return res.status(404)
+             .json({ error: "Blog not found" });
+        }
+        if (!blog.featuredImage.url ||!blog.featuredImage.public_id) {
+            return res.status(404)
+              .json({ message: "Blog url or id not found" })
+        }
+        const isDelete = await deleteCloudinary(blog.featuredImage.public_id);
+        if (!isDelete) {
+            return res.status(500)
+            .json({ message: "Cloudinary delete error" })
+        }
+        
+        const cloudinaryResponse = await uploadCloudinary(imageData.path, "blog_folder")
+        if (!cloudinaryResponse.secure_url ||!cloudinaryResponse.public_id) {
+            return res.status(400)
+             .json({
+                    message: "Problem occured in cloudinary"
+                })
+        }
+        const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
+            featuredImage: {
+                url : cloudinaryResponse.secure_url,
+                public_id : cloudinaryResponse.public_id
+            }
+        },{timestamps: true})
+
+        if (!updatedBlog) {
+            return res.status(404)
+           .json({ error: "Blog not found" });
+        }
+        return res.status(200).json({
+            message : "Success",
+            data : {
+                url : updatedBlog.featuredImage.url,
+                title : updatedBlog.title,
+                content : updatedBlog.content,
+                isActive : updatedBlog.isActive
+            }
+        })
+
+    } catch (err) {
+        return res.status(500)
+          .json({ error: "Internal server error", message: err.message });
+    }
+}
+
+const deleteBlog = async (req, res) => {
+    try {
+        const { id } = req.params;
 
         const blog = await BlogPost.findById(id);
 
@@ -94,34 +159,34 @@ const deleteBlog = async(req,res) => {
         //     .json({ error: "Blog not found" });
         // }
 
-        if(!blog.featuredImage.url || !blog.featuredImage.public_id) {
+        if (!blog.featuredImage.url || !blog.featuredImage.public_id) {
             return res.status(404)
-            .json({ message : "Blog not found" })
+                .json({ message: "Blog not found" })
         }
 
         const isDelete = await deleteCloudinary(blog.featuredImage.public_id);
 
-        if(!isDelete) {
+        if (!isDelete) {
             return res.status(500)
-            .json({ message : "Cloudinary delete error" })
+                .json({ message: "Cloudinary delete error" })
         }
 
         const isDeleteDatabase = await BlogPost.findByIdAndDelete(id);
 
-        if(!isDeleteDatabase) {
+        if (!isDeleteDatabase) {
             return res.status(400)
-            .json({
-                message : "Error in deleting database"
-            })
+                .json({
+                    message: "Error in deleting database"
+                })
         }
 
         return res.status(200)
-        .json({ message: "Blog deleted successfully" });
+            .json({ message: "Blog deleted successfully" });
 
     } catch (err) {
         console.error(err);
         res.status(500)
-        .json({ error: "Internal server error"});
+            .json({ error: "Internal server error" });
     }
 }
 
@@ -133,32 +198,32 @@ const getAllBlogs = async (req, res) => {
             return res.status(400).json({ error: "Blog not found" });
         }
         return res.status(200).json(blogs);
-        
+
     } catch (err) {
         return res.status(500)
-        .json({ message : "Internal server error" });        
+            .json({ message: "Internal server error" });
     }
 }
 
 const getBlog = async (req, res) => {
     try {
-        const {id} = req.params;
+        const { id } = req.params;
 
-        if(!id) {
+        if (!id) {
             return res.status(400)
-            .json({ err: "Id is missing" });
+                .json({ err: "Id is missing" });
         }
         const blog = await BlogPost.findById(id);
         if (!blog) {
             return res.status(402)
-            .json({ error: "Blog not found" });
+                .json({ error: "Blog not found" });
         }
 
         return res.status(200).json(blog);
-        
+
     } catch (err) {
         return res.status(500)
-        .json({ message : "Internal server error" });        
+            .json({ message: "Internal server error" });
     }
 }
 
@@ -167,6 +232,7 @@ const getBlog = async (req, res) => {
 module.exports = {
     createBlog,
     updateBlog,
+    updateBlogImage,
     deleteBlog,
     getAllBlogs,
     getBlog
