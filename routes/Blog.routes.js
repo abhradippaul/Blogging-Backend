@@ -1,5 +1,5 @@
 const express = require("express")
-const { createBlog, updateBlog, deleteBlog, getBlog, getAllBlogs, updateBlogImage } = require("../controllers/Blog.controllers.js")
+const { createBlog, updateBlog, deleteBlog, getBlog, getAllBlogs, updateBlogImage, blogLike } = require("../controllers/Blog.controllers.js")
 const { upload } = require("../middlewares/multer.middlewares.js")
 const { verifyAccessToken } = require("../middlewares/userAuth.middlewares.js")
 const router = express.Router()
@@ -15,6 +15,10 @@ router.route("/:id")
 
 router.route("/:id/updateblogimage")
 .put(verifyAccessToken,upload.single("imageData"),updateBlogImage)
+
+router.route("/:id/like")
+.post(verifyAccessToken,blogLike)
+.delete(verifyAccessToken,blogLike)
 
 
 module.exports = router
