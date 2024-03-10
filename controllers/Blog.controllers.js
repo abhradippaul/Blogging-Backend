@@ -196,11 +196,29 @@ const getAllBlogs = async (req, res) => {
     try {
         const blogs = await BlogPost.aggregate([
             {
+                $lookup : {
+                    from: "likes",
+                    localField: "_id",
+                    foreignField: "blog",
+                    as: "likes"
+                }
+            },
+            {
+                $lookup : {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner"
+                }
+            },
+            {
                 $project: {
                     title: 1,
                     content: 1,
                     isActive: 1,
                     "featuredImage.url": 1,
+                    "owner" : 1,
+                    "likes" : 1,
                     _id: 0
                 }
             }
