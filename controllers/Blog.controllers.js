@@ -1,40 +1,40 @@
 
-const { default: mongoose } = require("mongoose");
+const mongoose = require("mongoose");
 const BlogPost = require("../models/Blog.models.js");
 const { uploadCloudinary, deleteCloudinary } = require("../utlis/Cloudinary.js");
 const Like = require("../models/Like.models.js");
+const optimize_url = process.env.OPTIMIZE_URL
 
 const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
-    const { owner } = req.user
+    const { _id } = req.user
+    // console.log(req.file);
     try {
 
-        if (!owner) {
+        if (!_id) {
             return res.status(401)
                 .json({ error: "You are not authorized to perform this action" })
         }
-        // console.log(req.user);
-        const imageData = req.file.path
+        const imageData = req?.file?.path || null
 
-        if (!title || !slug || !content) {
-            return res.status(400).json({ error: 'Title, slug, and content are required' });
+        if (!title || !slug || !content || !imageData) {
+            return res.status(400).json({ error: 'Title, slug, image and content are required' });
         }
 
-        const cloudinaryResponse = await uploadCloudinary(imageData, "blog_folder")
+        const cloudinaryResponse = await uploadCloudinary(imageData, "blog_folder/blog")
 
-        if (!cloudinaryResponse.secure_url || !cloudinaryResponse.public_id) {
-            return await res.status(400)
-                .json({
-                    message: "Problem occured in cloudinary"
-                })
+        if (!cloudinaryResponse.public_id) {
+            return res.status(400)
+                .json({ message: "Cloudinary upload went wrong" })
         }
         const newBlogPost = await BlogPost.create({
             title,
             slug,
             content,
             isActive: isActive,
+            owner: _id,
             featuredImage: {
-                url: cloudinaryResponse.secure_url,
+                url: optimize_url.concat(cloudinaryResponse.public_id),
                 public_id: cloudinaryResponse.public_id
             }
         });
@@ -196,7 +196,7 @@ const getAllBlogs = async (req, res) => {
     try {
         const blogs = await BlogPost.aggregate([
             {
-                $lookup : {
+                $lookup: {
                     from: "likes",
                     localField: "_id",
                     foreignField: "blog",
@@ -204,7 +204,7 @@ const getAllBlogs = async (req, res) => {
                 }
             },
             {
-                $lookup : {
+                $lookup: {
                     from: "users",
                     localField: "owner",
                     foreignField: "_id",
@@ -217,8 +217,8 @@ const getAllBlogs = async (req, res) => {
                     content: 1,
                     isActive: 1,
                     "featuredImage.url": 1,
-                    "owner" : 1,
-                    "likes" : 1,
+                    "owner": 1,
+                    "likes": 1,
                     _id: 0
                 }
             }
@@ -263,7 +263,32 @@ const getBlog = async (req, res) => {
                     from: "likes",
                     localField: "_id",
                     foreignField: "blog",
-                    as: "likes"
+                    as: "likes",
+                    pipeline: [
+                        {
+                            $project: {
+                                user: 1,
+                                _id: 0
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: "comments",
+                    localField: "_id",
+                    foreignField: "blog",
+                    as: "comments",
+                    pipeline : [
+                        {
+                            $project: {
+                                user: 1,
+                                comment : 1,
+                                _id: 0
+                            }
+                        }
+                    ]
                 }
             },
             {
@@ -273,6 +298,7 @@ const getBlog = async (req, res) => {
                     isActive: 1,
                     "featuredImage.url": 1,
                     likes: 1,
+                    comments : 1,
                     _id: 0
                 }
             }
@@ -290,40 +316,16 @@ const getBlog = async (req, res) => {
 
     } catch (err) {
         return res.status(500)
-            .json({ message: "Internal server error" ,
-            error: err.message});
+            .json({
+                message: "Internal server error",
+                error: err.message
+            });
     }
 }
 
-const blogLike = async(req, res) => {
-    try {
-        const { id:blogId } = req.params;
-        const {_id:viewId} = req.user
 
-        if (!blogId || !viewId) {
-            return res.status(400)
-           .json({ err: "Id is missing" });
-        }
-        const like = await Like.create({
-            user: viewId,
-            blog: blogId
-        })
 
-        if(!like) {
-            return res.status(400)
-             .json({ error: "Error in like" });
-        }
-        return res.status(200).json({
-            message: "Success",
-            data: like
-        });
 
-    } catch (err) {
-        return res.status(500)
-           .json({ message: "Internal server error",
-            error: err.message});
-    }
-}
 
 
 
@@ -333,6 +335,5 @@ module.exports = {
     updateBlogImage,
     deleteBlog,
     getAllBlogs,
-    getBlog,
-    blogLike
+    getBlog
 }
