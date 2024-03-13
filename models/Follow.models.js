@@ -9,7 +9,7 @@ const followSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Blog'
     }
-},{timestamps: true})
+})
 
 const FollowModel = mongoose.model("Follow",followSchema)
 

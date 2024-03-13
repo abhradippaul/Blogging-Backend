@@ -145,9 +145,34 @@ const followChannel = async (req, res) => {
   }
 }
 
+const unfollowChannel = async (req, res) => {
+  try {
+    const { _id: user } = req.user
+    const { channelId } = req.params
+    if (!channelId || !user) {
+      return res.status(400)
+        .json({ message: 'Channel and user are required' });
+    }
+    const follow = await FollowModel.findOneAndDelete({
+      user: user,
+      channel: channelId
+    })
+    if (!follow) {
+      return res.status(400)
+        .json({ message: 'Mongodb error' });
+    }
+    return res.status(200)
+      .json({ message: 'User unfollowed successfully' });
+  } catch (err) {
+    return res.status(500)
+      .json({ error: "Internal server error", message: err.message })
+  }
+}
+
 module.exports = {
   createUser,
   userLogin,
   userLogout,
-  followChannel
+  followChannel,
+  unfollowChannel
 }

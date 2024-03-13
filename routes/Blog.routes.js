@@ -2,7 +2,7 @@ const express = require("express")
 const { createBlog, updateBlog, deleteBlog, getBlog, getAllBlogs, updateBlogImage } = require("../controllers/Blog.controllers.js")
 const { upload } = require("../middlewares/multer.middlewares.js")
 const { verifyAccessToken } = require("../middlewares/userAuth.middlewares.js")
-const { blogLike, createBlogComment } = require("../controllers/BlogInfo.controllers.js")
+const { blogLike, createBlogComment, deleteBlogComment, deleteBlogLike } = require("../controllers/BlogInfo.controllers.js")
 const router = express.Router()
 
 // For creating a new blog
@@ -23,11 +23,12 @@ router.route("/:id/updateblogimage")
 // For give like the blog
 router.route("/:id/like")
 .post(verifyAccessToken,blogLike)
-.delete(verifyAccessToken,blogLike)
+.delete(verifyAccessToken,deleteBlogLike)
 
 // For creating a new comment
 router.route("/:id/comment")
 .post(verifyAccessToken,createBlogComment)
+.delete(verifyAccessToken,deleteBlogComment)
 
 
 

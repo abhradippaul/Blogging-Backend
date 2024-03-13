@@ -2,7 +2,6 @@
 const mongoose = require("mongoose");
 const BlogPost = require("../models/Blog.models.js");
 const { uploadCloudinary, deleteCloudinary } = require("../utlis/Cloudinary.js");
-const Like = require("../models/Like.models.js");
 const optimize_url = process.env.OPTIMIZE_URL
 
 const createBlog = async (req, res) => {
@@ -246,8 +245,10 @@ const getBlog = async (req, res) => {
     try {
         let { id } = req.params;
         let { _id } = req.user
+        console.log(_id)
 
         id = new mongoose.Types.ObjectId(id)
+        _id = new mongoose.Types.ObjectId(_id)
 
         if (!id || !_id) {
             return res.status(400)
@@ -267,31 +268,25 @@ const getBlog = async (req, res) => {
                     as: "owner",
                     pipeline: [
                         {
-                            $project: {
-                                fullName: 1
-                            }
-                        },
-                        {
                             $lookup: {
                                 from: "follows",
                                 localField: "_id",
                                 foreignField: "channel",
-                                as: "follows",
-                                pipeline : [
-                                    
-                                ]
+                                as: "follows"
                             }
-                        }, 
+                        },
                         {
                             $addFields: {
                                 follows: {
                                     count: {
-                                        $size: "$follows"
+                                        $size: {
+                                            $ifNull: ["$follows", 0]
+                                        }
                                     },
                                     isFollowed: {
                                         $cond: {
                                             if: {
-                                                $in: [new mongoose.Types.ObjectId(_id), "$follows.user"]
+                                                $in: [_id, "$follows.user"]
                                             },
                                             then: true,
                                             else: false
@@ -299,21 +294,13 @@ const getBlog = async (req, res) => {
                                     }
                                 }
                             }
-                        },
-                        {
+                        },{
                             $addFields : {
                                 follows: {
-                                    $first : "$follows"
-                                }
-                            }
-                        },
-                        {
-                            $project : {
-                                "follows.count" : 1,
-                                "follows.isFollowed" : 1
+                                    $first: "$follows"
+                                },
                             }
                         }
-
                     ]
                 }
             },
@@ -334,10 +321,32 @@ const getBlog = async (req, res) => {
             },
             {
                 $addFields: {
-                    likesCount: {
-                        $size: "$likes"
+                    likes: {
+                        likesCount: {
+                            $size: {
+                                $ifNull: ["$likes", []]
+                            }
+                        },
+                        isLiked: {
+                            $cond: {
+                                if: {
+                                    $in: [_id, "$likes.user"]
+                                },
+                                then: true,
+                                else: false
+                            }
+                        }
+
                     }
                 }
+            },
+            {
+                $addFields: {
+                    likes: {
+                        $first: "$likes"
+                    }
+                }
+
             },
             {
                 $lookup: {
@@ -347,26 +356,11 @@ const getBlog = async (req, res) => {
                     as: "comments",
                     pipeline: [
                         {
-                            $project: {
-                                user: 1,
-                                comment: 1,
-                                _id: 0
-                            }
-                        },
-                        {
                             $lookup: {
                                 from: "users",
                                 localField: "user",
                                 foreignField: "_id",
                                 as: "user",
-                                pipeline: [
-                                    {
-                                        $project: {
-                                            userName: 1,
-                                            _id: 0
-                                        }
-                                    },
-                                ]
                             }
                         },
                         {
@@ -380,13 +374,28 @@ const getBlog = async (req, res) => {
                 }
             },
             {
+                $addFields : {
+                    commentsCount: {
+                        $size: "$comments"
+                    },
+                }
+                
+            },
+            {
                 $project: {
                     title: 1,
                     content: 1,
                     "featuredImage.url": 1,
-                    likesCount: 1,
-                    owner: 1,
-                    comments: 1,
+                    "owner.fullName": 1,
+                    "owner._id": 1,
+                    "owner.featuredImage.url": 1,
+                    "owner.follows.count": 1,
+                    "owner.follows.isFollowed": 1,
+                    "likes.likesCount": 1,
+                    "likes.isLiked": 1,
+                    "comments.user": 1,
+                    "comments.comment": 1,
+                    "commentsCount": 1,
                     _id: 0
                 }
             }
