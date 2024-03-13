@@ -1,4 +1,5 @@
 const Comment = require("../models/Comment.models");
+const Like = require("../models/Like.models");
 
 const blogLike = async (req, res) => {
     try {

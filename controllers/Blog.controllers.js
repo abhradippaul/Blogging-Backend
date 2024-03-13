@@ -245,10 +245,11 @@ const getAllBlogs = async (req, res) => {
 const getBlog = async (req, res) => {
     try {
         let { id } = req.params;
+        let { _id } = req.user
 
         id = new mongoose.Types.ObjectId(id)
 
-        if (!id) {
+        if (!id || !_id) {
             return res.status(400)
                 .json({ err: "Id is missing" });
         }
@@ -260,18 +261,82 @@ const getBlog = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "likes",
-                    localField: "_id",
-                    foreignField: "blog",
-                    as: "likes",
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
                     pipeline: [
                         {
                             $project: {
-                                user: 1,
-                                _id: 0
+                                fullName: 1
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "follows",
+                                localField: "_id",
+                                foreignField: "channel",
+                                as: "follows",
+                                pipeline : [
+                                    
+                                ]
+                            }
+                        }, 
+                        {
+                            $addFields: {
+                                follows: {
+                                    count: {
+                                        $size: "$follows"
+                                    },
+                                    isFollowed: {
+                                        $cond: {
+                                            if: {
+                                                $in: [new mongoose.Types.ObjectId(_id), "$follows.user"]
+                                            },
+                                            then: true,
+                                            else: false
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            $addFields : {
+                                follows: {
+                                    $first : "$follows"
+                                }
+                            }
+                        },
+                        {
+                            $project : {
+                                "follows.count" : 1,
+                                "follows.isFollowed" : 1
                             }
                         }
+
                     ]
+                }
+            },
+            {
+                $addFields: {
+                    owner: {
+                        $first: "$owner"
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "likes",
+                    localField: "_id",
+                    foreignField: "blog",
+                    as: "likes"
+                }
+            },
+            {
+                $addFields: {
+                    likesCount: {
+                        $size: "$likes"
+                    }
                 }
             },
             {
@@ -280,12 +345,35 @@ const getBlog = async (req, res) => {
                     localField: "_id",
                     foreignField: "blog",
                     as: "comments",
-                    pipeline : [
+                    pipeline: [
                         {
                             $project: {
                                 user: 1,
-                                comment : 1,
+                                comment: 1,
                                 _id: 0
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "user",
+                                foreignField: "_id",
+                                as: "user",
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            userName: 1,
+                                            _id: 0
+                                        }
+                                    },
+                                ]
+                            }
+                        },
+                        {
+                            $addFields: {
+                                user: {
+                                    $first: "$user.userName"
+                                }
                             }
                         }
                     ]
@@ -295,10 +383,10 @@ const getBlog = async (req, res) => {
                 $project: {
                     title: 1,
                     content: 1,
-                    isActive: 1,
                     "featuredImage.url": 1,
-                    likes: 1,
-                    comments : 1,
+                    likesCount: 1,
+                    owner: 1,
+                    comments: 1,
                     _id: 0
                 }
             }

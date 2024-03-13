@@ -1,6 +1,7 @@
 const express = require('express');
-const { userLogin, createUser, userLogout } = require('../controllers/User.controllers');
+const { userLogin, createUser, userLogout, followChannel } = require('../controllers/User.controllers');
 const { upload } = require('../middlewares/multer.middlewares');
+const { verifyAccessToken } = require('../middlewares/userAuth.middlewares');
 const router = express.Router();
 
 router.route("/create")
@@ -11,5 +12,8 @@ router.route("/login")
     
 router.route("/logout")
     .post(userLogout)
+
+router.route("/:channelId/follow")
+.post(verifyAccessToken,followChannel)
 
 module.exports = router

@@ -2,6 +2,7 @@ const User = require("../models/User.models.js");
 const bcrypt = require('bcrypt');
 const { generateAccessToken, generateRefreshToken } = require("../utlis/JwtTokens.js");
 const { uploadCloudinary } = require("../utlis/Cloudinary.js");
+const FollowModel = require("../models/Follow.models.js");
 const cookieSetting = { httpOnly: true, secure: true }
 const optimize_url = process.env.OPTIMIZE_URL
 
@@ -12,16 +13,16 @@ const createUser = async (req, res) => {
     const imageData = req.file.path || null
     // console.log(imageData);
 
-    if (!fullName || !email || !password || !userName ) {
+    if (!fullName || !email || !password || !userName) {
       return res.status(400)
         .json({ error: 'All fields are required' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const isUserExist = await User.findOne({ 
-        $or : [{email},{userName}]
-     })
+    const isUserExist = await User.findOne({
+      $or: [{ email }, { userName }]
+    })
 
     if (isUserExist) {
       return res.status(400)
@@ -119,8 +120,34 @@ const userLogout = (req, res) => {
   }
 }
 
+const followChannel = async (req, res) => {
+  try {
+    const { _id: user } = req.user
+    const { channelId } = req.params
+    if (!channelId || !user) {
+      return res.status(400)
+        .json({ message: 'Channel and user are required' });
+    }
+    const follow = await FollowModel.create({
+      user: user,
+      channel: channelId
+    })
+    if (!follow) {
+      return res.status(400)
+        .json({ message: 'Mongodb error' });
+    }
+    return res.status(200)
+      .json({ message: 'User followed successfully' });
+
+  } catch (err) {
+    return res.status(500)
+      .json({ message: 'Internal server error' });
+  }
+}
+
 module.exports = {
   createUser,
   userLogin,
-  userLogout
+  userLogout,
+  followChannel
 }

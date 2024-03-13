@@ -8,7 +8,7 @@ const generateAccessToken = (_id,owner) => {
             owner
         };
         const options = {
-            expiresIn: '15m', 
+            expiresIn: '1d', 
         };
         return jwt.sign(payload, secretKey, options);
     } catch (err) {
