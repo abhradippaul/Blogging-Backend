@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const { generateAccessToken, generateRefreshToken } = require("../utlis/JwtTokens.js");
 const { uploadCloudinary } = require("../utlis/Cloudinary.js");
 const FollowModel = require("../models/Follow.models.js");
+const { Mongoose, default: mongoose } = require("mongoose");
 const cookieSetting = { httpOnly: true, secure: true }
 
 const createUser = async (req, res) => {
@@ -113,7 +114,124 @@ const userLogout = (req, res) => {
   } catch (error) {
     console.error('Error in user logout:', error);
     res.status(500)
-      .json({ message: 'Internal server error' });
+      .json({ message: 'Internal server error', success: false });
+  }
+}
+
+const getUser = async (req, res) => {
+  try {
+    const { userName } = req.params
+    const { _id: userId } = req.user
+    if (!userName || !userId) {
+      return res.status(400)
+        .json({ message: 'User name is required' });
+    }
+    const user = await User.aggregate([
+      {
+        $match: {
+          userName: userName
+        }
+      },
+      {
+        $lookup: {
+          from: "blogs",
+          localField: "_id",
+          foreignField: "owner",
+          as: "blogs",
+          pipeline: [
+            {
+              $lookup: {
+                from: "comments",
+                localField: "_id",
+                foreignField: "blog",
+                as: "comments",
+              }
+            },
+            {
+              $addFields: {
+                commentsCount: {
+                  $size: {
+                    $ifNull: ["$comments", 0]
+                  }
+                }
+              }
+            },
+            {
+              $lookup : {
+                from: "likes",
+                localField: "_id",
+                foreignField: "blog",
+                as: "likes",
+              }
+            },
+            {
+              $addFields: {
+                likesCount: {
+                  $size: {
+                    $ifNull: ["$likes", 0]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        $lookup: {
+          from: "follows",
+          localField: "_id",
+          foreignField: "channel",
+          as: "followers"
+        }
+      },
+      {
+        $addFields: {
+          followersCount: {
+            $size: {
+              $ifNull: ["$followers", 0]
+            }
+          },
+          isFollowed: {
+            $cond: {
+              if: {
+                $in: [new mongoose.Types.ObjectId(userId), "$followers.user"]
+              },
+              then: true,
+              else: false
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          userName: 1,
+          fullName: 1,
+          description: 1,
+          featuredImage: 1,
+          createdAt: 1,
+          _id: 0,
+          "blogs._id": 1,
+          "blogs.title": 1,
+          "blogs.content": 1,
+          "blogs.featuredImage.public_id": 1,
+          "blogs.commentsCount": 1,
+          "blogs.likesCount": 1,
+          followersCount: 1,
+          isFollowed: 1
+        }
+      }
+    ])
+    if (!user.length) {
+      return res.status(400)
+        .json({ message: 'User not found' });
+    }
+    return res.status(200)
+      .json({ data: user[0], success: true });
+
+  } catch (err) {
+    console.log(err.message)
+    return res.status(500)
+      .json({ message: 'Internal server error', success: false });
   }
 }
 
@@ -171,5 +289,6 @@ module.exports = {
   userLogin,
   userLogout,
   followChannel,
-  unfollowChannel
+  unfollowChannel,
+  getUser
 }

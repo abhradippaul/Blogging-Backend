@@ -1,8 +1,7 @@
-
 const mongoose = require("mongoose");
 const BlogPost = require("../models/Blog.models.js");
 const { uploadCloudinary, deleteCloudinary } = require("../utlis/Cloudinary.js");
-const optimize_url = process.env.OPTIMIZE_URL
+
 
 const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
@@ -200,22 +199,71 @@ const getAllBlogs = async (req, res) => {
                 }
             },
             {
+                $addFields: {
+                    likesCount: {
+                        $size: "$likes"
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "comments",
+                    localField: "_id",
+                    foreignField: "blog",
+                    as: "comments"
+                }
+            },
+            {
+                $addFields: {
+                    commentsCount: {
+                        $size: "$comments"
+                    }
+                }
+            },
+            {
                 $lookup: {
                     from: "users",
                     localField: "owner",
                     foreignField: "_id",
-                    as: "owner"
+                    as: "owner",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "follows",
+                                localField: "_id",
+                                foreignField: "channel",
+                                as: "followers"
+                            }
+                        },
+                        {
+                            $addFields: {
+                                followersCount: {
+                                    $size: "$followers"
+                                }
+                            }
+                        },
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    owner: {
+                        $first: "$owner"
+                    }
                 }
             },
             {
                 $project: {
+                    createdAt: 1,
                     title: 1,
                     content: 1,
-                    isActive: 1,
                     "featuredImage.public_id": 1,
-                    "owner": 1,
-                    "likes": 1,
-                    _id: 0
+                    "owner.userName": 1,
+                    "owner.featuredImage": 1,
+                    "owner.followersCount": 1,
+                    "likesCount": 1,
+                    "commentsCount": 1,
+                    "followersCount": 1,
                 }
             }
         ])
@@ -224,7 +272,6 @@ const getAllBlogs = async (req, res) => {
             return res.status(400).json({ error: "Blog not found" });
         }
         return res.status(200).json({
-            message: "Success",
             success: true,
             data: blogs
         });
@@ -234,7 +281,8 @@ const getAllBlogs = async (req, res) => {
         return res.status(500)
             .json({
                 message: "Internal server error",
-                error: err.message
+                error: err.message,
+                success: false
             });
     }
 }
@@ -243,7 +291,6 @@ const getBlog = async (req, res) => {
     try {
         let { id } = req.params;
         let { _id } = req.user
-        console.log(_id)
 
         id = new mongoose.Types.ObjectId(id)
         _id = new mongoose.Types.ObjectId(_id)
@@ -363,8 +410,11 @@ const getBlog = async (req, res) => {
                         },
                         {
                             $addFields: {
-                                user: {
+                                userName: {
                                     $first: "$user.userName"
+                                },
+                                featuredImage: {
+                                     $first: "$user.featuredImage.public_id"
                                 }
                             }
                         }
@@ -386,15 +436,17 @@ const getBlog = async (req, res) => {
                     "featuredImage.public_id": 1,
                     "owner.fullName": 1,
                     "owner._id": 1,
+                    "owner.userName" : 1,
                     "owner.featuredImage.public_id": 1,
                     "owner.follows.count": 1,
                     "owner.follows.isFollowed": 1,
                     "likes.likesCount": 1,
                     "likes.isLiked": 1,
-                    "comments.user": 1,
+                    "comments.userName": 1,
                     "comments.comment": 1,
-                    "commentsCount": 1,
-                    _id: 0
+                    "comments.createdAt": 1,
+                    "comments.featuredImage" : 1,
+                    "commentsCount": 1
                 }
             }
         ]);
@@ -405,7 +457,6 @@ const getBlog = async (req, res) => {
         }
 
         return res.status(200).json({
-            message: "Success",
             success: true,
             data: blog[0]
         });
