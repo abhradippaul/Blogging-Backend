@@ -4,14 +4,12 @@ const { generateAccessToken, generateRefreshToken } = require("../utlis/JwtToken
 const { uploadCloudinary } = require("../utlis/Cloudinary.js");
 const FollowModel = require("../models/Follow.models.js");
 const cookieSetting = { httpOnly: true, secure: true }
-const optimize_url = process.env.OPTIMIZE_URL
 
 const createUser = async (req, res) => {
   try {
     const { fullName, email, password, userName, description } = req.body;
 
     const imageData = req.file.path || null
-    // console.log(imageData);
 
     if (!fullName || !email || !password || !userName) {
       return res.status(400)
@@ -43,7 +41,6 @@ const createUser = async (req, res) => {
       description,
       password: hashedPassword,
       featuredImage: {
-        url: optimize_url.concat(cloudinaryResponse.public_id),
         public_id: cloudinaryResponse.public_id
       }
     });
@@ -56,7 +53,7 @@ const createUser = async (req, res) => {
     }
 
     res.status(201)
-      .json({ message: 'User created successfully', user });
+      .json({ message: 'User created successfully', user, success: true });
 
   } catch (error) {
     res.status(500)
@@ -97,7 +94,7 @@ const userLogin = async (req, res) => {
     res.status(200)
       .cookie("access_token", accessToken, cookieSetting)
       .cookie("refresh_token", refreshToken, cookieSetting)
-      .json({ accessToken, refreshToken });
+      .json({ accessToken, refreshToken, success: true });
 
   } catch (error) {
     console.error('Error in user login:', error);
@@ -112,7 +109,7 @@ const userLogout = (req, res) => {
     res.clearCookie("access_token")
     res.clearCookie("refresh_token")
     res.status(200)
-      .json({ message: 'User logged out successfully' });
+      .json({ message: 'User logged out successfully', success: true });
   } catch (error) {
     console.error('Error in user logout:', error);
     res.status(500)
@@ -137,7 +134,7 @@ const followChannel = async (req, res) => {
         .json({ message: 'Mongodb error' });
     }
     return res.status(200)
-      .json({ message: 'User followed successfully' });
+      .json({ message: 'User followed successfully', success: true });
 
   } catch (err) {
     return res.status(500)
@@ -162,7 +159,7 @@ const unfollowChannel = async (req, res) => {
         .json({ message: 'Mongodb error' });
     }
     return res.status(200)
-      .json({ message: 'User unfollowed successfully' });
+      .json({ message: 'User unfollowed successfully', success: true });
   } catch (err) {
     return res.status(500)
       .json({ error: "Internal server error", message: err.message })

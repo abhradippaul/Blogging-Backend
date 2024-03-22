@@ -19,10 +19,6 @@ const blogPostSchema = mongoose.Schema({
         default: true
     },
     featuredImage : {
-        url : {
-            type : String,
-            required : true
-        },
         public_id : {
             type : String,
             required : true

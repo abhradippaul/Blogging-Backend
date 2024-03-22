@@ -7,7 +7,6 @@ const optimize_url = process.env.OPTIMIZE_URL
 const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
     const { _id } = req.user
-    // console.log(req.file);
     try {
 
         if (!_id) {
@@ -33,7 +32,6 @@ const createBlog = async (req, res) => {
             isActive: isActive,
             owner: _id,
             featuredImage: {
-                url: optimize_url.concat(cloudinaryResponse.public_id),
                 public_id: cloudinaryResponse.public_id
             }
         });
@@ -43,7 +41,7 @@ const createBlog = async (req, res) => {
         }
 
         return res.status(201)
-            .json({ message: 'Blog post created successfully', data: newBlogPost });
+            .json({ message: 'Blog post created successfully', data: newBlogPost, success: true });
 
     } catch (err) {
         return res.status(500)
@@ -77,11 +75,11 @@ const updateBlog = async (req, res) => {
         return res.status(200)
             .json({
                 message: "Success",
+                success: true,
                 data: {
-                    url: updatedBlog.featuredImage.url,
+                    url: updatedBlog.featuredImage.public_id,
                     title: updatedBlog.title,
                     content: updatedBlog.content,
-                    isActive: updatedBlog.isActive
                 }
             });
     } catch (err) {
@@ -105,7 +103,7 @@ const updateBlogImage = async (req, res) => {
             return res.status(404)
                 .json({ error: "Blog not found" });
         }
-        if (!blog.featuredImage.url || !blog.featuredImage.public_id) {
+        if (!blog.featuredImage.public_id) {
             return res.status(404)
                 .json({ message: "Blog url or id not found" })
         }
@@ -116,7 +114,7 @@ const updateBlogImage = async (req, res) => {
         }
 
         const cloudinaryResponse = await uploadCloudinary(imageData.path, "blog_folder")
-        if (!cloudinaryResponse.secure_url || !cloudinaryResponse.public_id) {
+        if (!cloudinaryResponse.public_id) {
             return res.status(400)
                 .json({
                     message: "Problem occured in cloudinary"
@@ -124,7 +122,6 @@ const updateBlogImage = async (req, res) => {
         }
         const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
             featuredImage: {
-                url: cloudinaryResponse.secure_url,
                 public_id: cloudinaryResponse.public_id
             }
         }, { timestamps: true })
@@ -135,11 +132,11 @@ const updateBlogImage = async (req, res) => {
         }
         return res.status(200).json({
             message: "Success",
+            success: true,
             data: {
-                url: updatedBlog.featuredImage.url,
+                url: updatedBlog.featuredImage.public_id,
                 title: updatedBlog.title,
                 content: updatedBlog.content,
-                isActive: updatedBlog.isActive
             }
         })
 
@@ -160,7 +157,7 @@ const deleteBlog = async (req, res) => {
                 .json({ error: "Blog not found" });
         }
 
-        if (!blog.featuredImage.url || !blog.featuredImage.public_id) {
+        if (!blog.featuredImage.public_id) {
             return res.status(404)
                 .json({ message: "Blog not found" })
         }
@@ -182,7 +179,7 @@ const deleteBlog = async (req, res) => {
         }
 
         return res.status(200)
-            .json({ message: "Blog deleted successfully" });
+            .json({ message: "Blog deleted successfully", success: true });
 
     } catch (err) {
         console.error(err);
@@ -215,7 +212,7 @@ const getAllBlogs = async (req, res) => {
                     title: 1,
                     content: 1,
                     isActive: 1,
-                    "featuredImage.url": 1,
+                    "featuredImage.public_id": 1,
                     "owner": 1,
                     "likes": 1,
                     _id: 0
@@ -228,6 +225,7 @@ const getAllBlogs = async (req, res) => {
         }
         return res.status(200).json({
             message: "Success",
+            success: true,
             data: blogs
         });
 
@@ -294,8 +292,8 @@ const getBlog = async (req, res) => {
                                     }
                                 }
                             }
-                        },{
-                            $addFields : {
+                        }, {
+                            $addFields: {
                                 follows: {
                                     $first: "$follows"
                                 },
@@ -374,21 +372,21 @@ const getBlog = async (req, res) => {
                 }
             },
             {
-                $addFields : {
+                $addFields: {
                     commentsCount: {
                         $size: "$comments"
                     },
                 }
-                
+
             },
             {
                 $project: {
                     title: 1,
                     content: 1,
-                    "featuredImage.url": 1,
+                    "featuredImage.public_id": 1,
                     "owner.fullName": 1,
                     "owner._id": 1,
-                    "owner.featuredImage.url": 1,
+                    "owner.featuredImage.public_id": 1,
                     "owner.follows.count": 1,
                     "owner.follows.isFollowed": 1,
                     "likes.likesCount": 1,
@@ -408,6 +406,7 @@ const getBlog = async (req, res) => {
 
         return res.status(200).json({
             message: "Success",
+            success: true,
             data: blog[0]
         });
 
