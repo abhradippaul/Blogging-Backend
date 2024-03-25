@@ -60,6 +60,10 @@ const updateBlog = async (req, res) => {
             return res.status(400)
                 .json({ error: "Slug cannot be updated" });
         }
+        if (!id) {
+            return res.status(400)
+                .json({ error: "UserName is missing" });
+        }
 
         const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
             ...updatedData
@@ -414,7 +418,7 @@ const getBlog = async (req, res) => {
                                     $first: "$user.userName"
                                 },
                                 featuredImage: {
-                                     $first: "$user.featuredImage.public_id"
+                                    $first: "$user.featuredImage.public_id"
                                 }
                             }
                         }
@@ -436,7 +440,7 @@ const getBlog = async (req, res) => {
                     "featuredImage.public_id": 1,
                     "owner.fullName": 1,
                     "owner._id": 1,
-                    "owner.userName" : 1,
+                    "owner.userName": 1,
                     "owner.featuredImage.public_id": 1,
                     "owner.follows.count": 1,
                     "owner.follows.isFollowed": 1,
@@ -445,7 +449,7 @@ const getBlog = async (req, res) => {
                     "comments.userName": 1,
                     "comments.comment": 1,
                     "comments.createdAt": 1,
-                    "comments.featuredImage" : 1,
+                    "comments.featuredImage": 1,
                     "commentsCount": 1
                 }
             }

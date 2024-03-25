@@ -9,15 +9,15 @@ const userSchema = new Schema({
     description: {
         type: String
     },
-    userName : {
+    userName: {
         type: String,
         required: true,
         unique: true
     },
-    featuredImage : {
-        public_id : {
-            type : String,
-            required : true
+    featuredImage: {
+        public_id: {
+            type: String,
+            required: true
         }
     },
     email: {
@@ -28,8 +28,11 @@ const userSchema = new Schema({
     password: {
         type: String,
         required: true
+    },
+    refreshToken: {
+        type: String
     }
-},{timestamps : true});
+}, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 

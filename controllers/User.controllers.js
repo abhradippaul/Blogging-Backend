@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const { generateAccessToken, generateRefreshToken } = require("../utlis/JwtTokens.js");
 const { uploadCloudinary } = require("../utlis/Cloudinary.js");
 const FollowModel = require("../models/Follow.models.js");
-const { Mongoose, default: mongoose } = require("mongoose");
+const { mongoose } = require("mongoose");
 const cookieSetting = { httpOnly: true, secure: true }
 
 const createUser = async (req, res) => {
@@ -63,39 +63,66 @@ const createUser = async (req, res) => {
 }
 const userLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: userEmail, password } = req.body;
 
-    if (!email || !password) {
+    if (!userEmail || !password) {
       return res.status(403)
         .json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.aggregate([
+      {
+        $match: {
+          email: userEmail,
+        }
+      },
+      {
+        $project: {
+          password: 1
+        }
+      }
+    ])
 
     if (!user) {
       return res.status(401)
         .json({ message: 'User not found' });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(password, user[0].password);
 
     if (!passwordMatch) {
       return res.status(401)
         .json({ message: 'Wrong email or password' });
     }
+    const { _id, userName, email } = user
 
-    const accessToken = generateAccessToken(user._id, user.fullName)
-    const refreshToken = generateRefreshToken(user._id, user.fullName)
+    const accessToken = generateAccessToken({ _id, userName, email })
+    const refreshToken = generateRefreshToken({ _id, userName, email })
 
     if (!accessToken || !refreshToken) {
       return res.status(500)
         .json({ message: 'Internal server error' });
     }
 
+    const updatedRefreshToken = await User.findByIdAndUpdate(user[0]._id, 
+      { $set: { refreshToken: refreshToken } }, {
+      returnOriginal: false,
+      projection: {
+        featuredImage: 1,
+        _id: 0,
+        userName: 1
+      }
+    })
+
+    if (!updatedRefreshToken) {
+      return res.status(500)
+        .json({ message: 'Problem in updating refresh token' });
+    }
+    console.log(updatedRefreshToken);
     res.status(200)
       .cookie("access_token", accessToken, cookieSetting)
       .cookie("refresh_token", refreshToken, cookieSetting)
-      .json({ accessToken, refreshToken, success: true });
+      .json({ accessToken, refreshToken, success: true, user: updatedRefreshToken });
 
   } catch (error) {
     console.error('Error in user login:', error);
@@ -114,7 +141,7 @@ const userLogout = (req, res) => {
   } catch (error) {
     console.error('Error in user logout:', error);
     res.status(500)
-      .json({ message: 'Internal server error', success: false });
+      .json({ message: 'Internal server error' });
   }
 }
 
@@ -157,7 +184,7 @@ const getUser = async (req, res) => {
               }
             },
             {
-              $lookup : {
+              $lookup: {
                 from: "likes",
                 localField: "_id",
                 foreignField: "blog",
