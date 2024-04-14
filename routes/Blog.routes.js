@@ -11,7 +11,7 @@ router.route("/")
 .get(getAllBlogs)
 
 // For updating a blog
-router.route("/:id")
+router.route("/:slug")
 .put(verifyAccessToken,updateBlog)
 .delete(verifyAccessToken,deleteBlog)
 .get(verifyAccessToken,getBlog)

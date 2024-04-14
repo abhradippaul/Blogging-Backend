@@ -7,7 +7,8 @@ const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
     const { _id } = req.user
     try {
-
+        // console.log(_id)
+        // console.log(req.headers)
         if (!_id) {
             return res.status(401)
                 .json({ error: "You are not authorized to perform this action" })
@@ -259,8 +260,10 @@ const getAllBlogs = async (req, res) => {
             {
                 $project: {
                     createdAt: 1,
+                    slug: 1,
                     title: 1,
                     content: 1,
+                    _id: 0,
                     "featuredImage.public_id": 1,
                     "owner.userName": 1,
                     "owner.featuredImage": 1,
@@ -293,20 +296,18 @@ const getAllBlogs = async (req, res) => {
 
 const getBlog = async (req, res) => {
     try {
-        let { id } = req.params;
+        let { slug } = req.params;
         let { _id } = req.user
-
-        id = new mongoose.Types.ObjectId(id)
         _id = new mongoose.Types.ObjectId(_id)
 
-        if (!id || !_id) {
+        if (!slug || !_id) {
             return res.status(400)
-                .json({ err: "Id is missing" });
+                .json({ err: "Id or slug is missing" });
         }
         const blog = await BlogPost.aggregate([
             {
                 $match: {
-                    _id: id
+                    slug: slug
                 }
             },
             {
@@ -326,28 +327,20 @@ const getBlog = async (req, res) => {
                         },
                         {
                             $addFields: {
-                                follows: {
-                                    count: {
-                                        $size: {
-                                            $ifNull: ["$follows", 0]
-                                        }
-                                    },
-                                    isFollowed: {
-                                        $cond: {
-                                            if: {
-                                                $in: [_id, "$follows.user"]
-                                            },
-                                            then: true,
-                                            else: false
-                                        }
+                                followersCount: {
+                                    $size: {
+                                        $ifNull: ["$follows", 0]
+                                    }
+                                },
+                                isFollowed: {
+                                    $cond: {
+                                        if: {
+                                            $in: [_id, "$follows.user"]
+                                        },
+                                        then: true,
+                                        else: false
                                     }
                                 }
-                            }
-                        }, {
-                            $addFields: {
-                                follows: {
-                                    $first: "$follows"
-                                },
                             }
                         }
                     ]
@@ -370,32 +363,21 @@ const getBlog = async (req, res) => {
             },
             {
                 $addFields: {
-                    likes: {
-                        likesCount: {
-                            $size: {
-                                $ifNull: ["$likes", []]
-                            }
-                        },
-                        isLiked: {
-                            $cond: {
-                                if: {
-                                    $in: [_id, "$likes.user"]
-                                },
-                                then: true,
-                                else: false
-                            }
+                    likesCount: {
+                        $size: {
+                            $ifNull: ["$likes", []]
                         }
-
+                    },
+                    isLiked: {
+                        $cond: {
+                            if: {
+                                $in: [_id, "$likes.user"]
+                            },
+                            then: true,
+                            else: false
+                        }
                     }
                 }
-            },
-            {
-                $addFields: {
-                    likes: {
-                        $first: "$likes"
-                    }
-                }
-
             },
             {
                 $lookup: {
@@ -437,16 +419,18 @@ const getBlog = async (req, res) => {
                 $project: {
                     title: 1,
                     content: 1,
+                    createdAt: 1,
                     "featuredImage.public_id": 1,
                     "owner.fullName": 1,
-                    "owner._id": 1,
                     "owner.userName": 1,
                     "owner.featuredImage.public_id": 1,
-                    "owner.follows.count": 1,
-                    "owner.follows.isFollowed": 1,
-                    "likes.likesCount": 1,
-                    "likes.isLiked": 1,
+                    "owner.followersCount": 1,
+                    "owner.isFollowed": 1,
+                    "owner._id": 1,
+                    "likesCount": 1,
+                    "isLiked": 1,
                     "comments.userName": 1,
+                    "comments._id": 1,
                     "comments.comment": 1,
                     "comments.createdAt": 1,
                     "comments.featuredImage": 1,

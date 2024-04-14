@@ -2,9 +2,9 @@ const User = require("../models/User.models.js");
 const bcrypt = require('bcrypt');
 const { generateAccessToken, generateRefreshToken } = require("../utlis/JwtTokens.js");
 const { uploadCloudinary } = require("../utlis/Cloudinary.js");
-const FollowModel = require("../models/Follow.models.js");
+const Follow = require("../models/Follow.models.js");
 const { mongoose } = require("mongoose");
-const cookieSetting = { httpOnly: true, secure: true }
+const cookieSetting = { httpOnly: true, secure: true, sameSite: "none" }
 
 const createUser = async (req, res) => {
   try {
@@ -70,25 +70,21 @@ const userLogin = async (req, res) => {
         .json({ message: 'Email and password are required' });
     }
 
-    const user = await User.aggregate([
+    const user = await User.findOne({ email: userEmail },
       {
-        $match: {
-          email: userEmail,
-        }
-      },
-      {
-        $project: {
-          password: 1
-        }
+        password: 1,
+        email: 1,
+        userName: 1,
+        _id: 1
       }
-    ])
+    )
 
     if (!user) {
       return res.status(401)
         .json({ message: 'User not found' });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user[0].password);
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return res.status(401)
@@ -104,7 +100,7 @@ const userLogin = async (req, res) => {
         .json({ message: 'Internal server error' });
     }
 
-    const updatedRefreshToken = await User.findByIdAndUpdate(user[0]._id, 
+    const updatedRefreshToken = await User.findByIdAndUpdate(user._id,
       { $set: { refreshToken: refreshToken } }, {
       returnOriginal: false,
       projection: {
@@ -122,6 +118,8 @@ const userLogin = async (req, res) => {
     res.status(200)
       .cookie("access_token", accessToken, cookieSetting)
       .cookie("refresh_token", refreshToken, cookieSetting)
+	.setHeader('Access-Control-Allow-Credentials', 'true')
+	.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5500')
       .json({ accessToken, refreshToken, success: true, user: updatedRefreshToken });
 
   } catch (error) {
@@ -236,9 +234,8 @@ const getUser = async (req, res) => {
           description: 1,
           featuredImage: 1,
           createdAt: 1,
-          _id: 0,
-          "blogs._id": 1,
           "blogs.title": 1,
+          "blogs.slug": 1,
           "blogs.content": 1,
           "blogs.featuredImage.public_id": 1,
           "blogs.commentsCount": 1,
@@ -266,11 +263,12 @@ const followChannel = async (req, res) => {
   try {
     const { _id: user } = req.user
     const { channelId } = req.params
+console.log(user, channelId)
     if (!channelId || !user) {
       return res.status(400)
         .json({ message: 'Channel and user are required' });
     }
-    const follow = await FollowModel.create({
+    const follow = await Follow.create({
       user: user,
       channel: channelId
     })
@@ -295,7 +293,7 @@ const unfollowChannel = async (req, res) => {
       return res.status(400)
         .json({ message: 'Channel and user are required' });
     }
-    const follow = await FollowModel.findOneAndDelete({
+    const follow = await Follow.findOneAndDelete({
       user: user,
       channel: channelId
     })

@@ -14,9 +14,9 @@ const blogLike = async (req, res) => {
             user: viewId,
             blog: blogId
         })
-        if(isLiked) {
+        if (isLiked) {
             return res.status(400)
-             .json({ error: "You have already liked this blog" });
+                .json({ error: "You have already liked this blog" });
         }
         const like = await Like.create({
             user: viewId,
@@ -28,8 +28,8 @@ const blogLike = async (req, res) => {
                 .json({ error: "Error in like" });
         }
         return res.status(200).json({
-            message: "Success",
-            data: like
+            message: "Blog liked successfully",
+            success: true
         });
 
     } catch (err) {
@@ -104,23 +104,23 @@ const createBlogComment = async (req, res) => {
 
 const deleteBlogComment = async (req, res) => {
     try {
-        const { id: blogId } = req.params;
-        const { _id: viewId } = req.user
-        if (!blogId || !viewId) {
+        // const { id: blogId } = req.params;
+        // const { _id: viewId } = req.user
+        const { id } = req.params
+        // console.log(blogId,viewId)
+        if (!id) {
             return res.status(400)
                 .json({ error: "Id is missing" });
         }
-        const isDeleted = await Comment.deleteOne({
-            blog: blogId,
-            user: viewId
-        })
-        if (!isDeleted) {
+        const isDeleted = await Comment.deleteOne({_id: id})
+        console.log(isDeleted)
+        if (!isDeleted.deletedCount) {
             return res.status(400)
                 .json({ error: "Error in deleting comment" });
         }
         return res.status(200).json({
             message: "Success",
-            isDeleted: true
+            success: true
         })
     } catch (err) {
         return res.status(500)
