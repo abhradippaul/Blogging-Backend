@@ -3,13 +3,13 @@ const { verifyToken } = require("../utlis/JwtTokens");
 
 const verifyAccessToken = (req, res, next) => {
     let accessToken = req.cookies?.access_token || null
-    if(!accessToken) {
+    if (!accessToken) {
         accessToken = req.headers.authkey || null
-        if(accessToken) {
-	accessToken = JSON.parse(accessToken).access_Token
+        if (accessToken) {
+            accessToken = JSON.parse(accessToken).access_Token
         }
     }
-    
+
     if (!accessToken) {
         return res.status(401).json({ message: 'Access token not found' });
     }

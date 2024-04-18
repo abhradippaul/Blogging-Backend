@@ -70,14 +70,7 @@ const userLogin = async (req, res) => {
         .json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email: userEmail },
-      {
-        password: 1,
-        email: 1,
-        userName: 1,
-        _id: 1
-      }
-    )
+    const user = await User.findOne({ email: userEmail })
 
     if (!user) {
       return res.status(401)
@@ -114,18 +107,17 @@ const userLogin = async (req, res) => {
       return res.status(500)
         .json({ message: 'Problem in updating refresh token' });
     }
-    console.log(updatedRefreshToken);
-    res.status(200)
+
+    return res.status(200)
       .cookie("access_token", accessToken, cookieSetting)
       .cookie("refresh_token", refreshToken, cookieSetting)
-	.setHeader('Access-Control-Allow-Credentials', 'true')
-	.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5500')
+      // .setHeader('Access-Control-Allow-Credentials', 'true')
+      // .setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5500')
       .json({ accessToken, refreshToken, success: true, user: updatedRefreshToken });
 
-  } catch (error) {
-    console.error('Error in user login:', error);
+  } catch (err) {
     res.status(500)
-      .json({ message: 'Internal server error' });
+      .json({ message: 'Internal server error', error: err.message });
   }
 
 }
@@ -263,7 +255,7 @@ const followChannel = async (req, res) => {
   try {
     const { _id: user } = req.user
     const { channelId } = req.params
-console.log(user, channelId)
+    
     if (!channelId || !user) {
       return res.status(400)
         .json({ message: 'Channel and user are required' });
@@ -297,6 +289,7 @@ const unfollowChannel = async (req, res) => {
       user: user,
       channel: channelId
     })
+    // console.log(follow);
     if (!follow) {
       return res.status(400)
         .json({ message: 'Mongodb error' });
@@ -309,11 +302,86 @@ const unfollowChannel = async (req, res) => {
   }
 }
 
+const getFollowing = async (req, res) => {
+  try {
+    const { userName } = req.user
+    if (!userName) {
+      return res.status(400)
+        .json({ message: 'User name is required' });
+    }
+    const followings = await User.aggregate([
+      {
+        $match: {
+          userName: userName
+        }
+      },
+      {
+        $lookup: {
+          from: "follows",
+          localField: "_id",
+          foreignField: "user",
+          as: "follows",
+          pipeline: [
+            {
+              $lookup: {
+                from: "users",
+                localField: "channel",
+                foreignField: "_id",
+                as: "follow",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 0,
+                      fullName: 1,
+                      userName: 1,
+                      featuredImage: 1
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              $addFields: {
+                follow: {
+                  $first: "$follow"
+                }
+              }
+            },
+          ]
+        }
+      },
+      {
+        $addFields: {
+          follows: "$follows.follow"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          follows: 1
+        }
+      }
+    ])
+    if (!followings) {
+      return res.status(400)
+        .json({ message: 'You do not follow anyone' });
+    }
+    return res.status(200).json({
+      data: followings[0],
+      success: true
+    })
+  } catch (err) {
+    return res.status(500)
+      .json({ error: "Internal server error", message: err.message })
+  }
+}
+
 module.exports = {
   createUser,
   userLogin,
   userLogout,
   followChannel,
   unfollowChannel,
-  getUser
+  getUser,
+  getFollowing
 }

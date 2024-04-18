@@ -90,7 +90,7 @@ const createBlogComment = async (req, res) => {
                 .json({ error: "Error in commenting" });
         }
         return res.status(200).json({
-            message: "Success",
+            success: true,
             data: blogComment
         });
     } catch (err) {
@@ -102,18 +102,46 @@ const createBlogComment = async (req, res) => {
     }
 }
 
+const updateBlogComment = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { comment } = req.body
+        if (!id) {
+            return res.status(400)
+                .json({ error: "Comment Id is missing" });
+        }
+        if (!comment) {
+            return res.status(400)
+                .json({ error: "Comment is missing" });
+        }
+        const isUpdated = await Comment.findByIdAndUpdate(id, { comment: comment })
+        if (!isUpdated) {
+            return res.status(400)
+                .json({ error: "Error in updating comment" });
+        }
+        return res.status(200).json({
+            success: true,
+            data: isUpdated
+        })
+
+    } catch (err) {
+        return res.status(500)
+            .json({
+                message: "Internal server error",
+                error: err.message
+            })
+    }
+
+}
+
 const deleteBlogComment = async (req, res) => {
     try {
-        // const { id: blogId } = req.params;
-        // const { _id: viewId } = req.user
         const { id } = req.params
-        // console.log(blogId,viewId)
         if (!id) {
             return res.status(400)
                 .json({ error: "Id is missing" });
         }
-        const isDeleted = await Comment.deleteOne({_id: id})
-        console.log(isDeleted)
+        const isDeleted = await Comment.deleteOne({ _id: id })
         if (!isDeleted.deletedCount) {
             return res.status(400)
                 .json({ error: "Error in deleting comment" });
@@ -135,5 +163,6 @@ module.exports = {
     blogLike,
     createBlogComment,
     deleteBlogLike,
-    deleteBlogComment
+    deleteBlogComment,
+    updateBlogComment
 }

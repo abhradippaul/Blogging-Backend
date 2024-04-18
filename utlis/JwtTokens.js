@@ -8,7 +8,6 @@ const generateAccessToken = ({_id,userName,email}) => {
             userName,
             email
         };
-        // console.log(payload)
         const options = {
             expiresIn: '1d', 
         };

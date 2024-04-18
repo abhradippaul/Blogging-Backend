@@ -7,8 +7,7 @@ const createBlog = async (req, res) => {
     const { title, slug, content, isActive } = req.body;
     const { _id } = req.user
     try {
-        // console.log(_id)
-        // console.log(req.headers)
+
         if (!_id) {
             return res.status(401)
                 .json({ error: "You are not authorized to perform this action" })
@@ -54,37 +53,26 @@ const createBlog = async (req, res) => {
 
 const updateBlog = async (req, res) => {
     try {
-        const updatedData = req.body;
-        const { id } = req.params;
+        const blogInfo = req.body;
+        const { slug } = req.params;
 
-        if (updatedData.slug || updatedData.file) {
+        if (!slug) {
             return res.status(400)
-                .json({ error: "Slug cannot be updated" });
-        }
-        if (!id) {
-            return res.status(400)
-                .json({ error: "UserName is missing" });
+                .json({ error: "Slug is missing" });
         }
 
-        const updatedBlog = await BlogPost.findByIdAndUpdate(id, {
-            ...updatedData
-        }, { new: true });
+        const updatedBlog = await BlogPost.updateOne({ slug: slug }, blogInfo, { new: true });
 
-        if (!updatedBlog) {
+        if (!updatedBlog.acknowledged) {
             return res.status(404)
-                .json({ error: "Blog not found" });
+                .json({ error: "Blog is not updated" });
         }
-
 
         return res.status(200)
             .json({
-                message: "Success",
+                message: "You blog is updated successfully",
                 success: true,
-                data: {
-                    url: updatedBlog.featuredImage.public_id,
-                    title: updatedBlog.title,
-                    content: updatedBlog.content,
-                }
+                data: updatedBlog
             });
     } catch (err) {
         return res.status(500)
@@ -457,11 +445,6 @@ const getBlog = async (req, res) => {
             });
     }
 }
-
-
-
-
-
 
 
 module.exports = {

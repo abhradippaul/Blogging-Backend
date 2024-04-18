@@ -3,8 +3,8 @@ const User = require("../models/User.models.js");
 
 const searchUser = async (req, res) => {
     try {
-        const { userInfo } = req.params
-        if (!userInfo) {
+        const { searchInfo } = req.params
+        if (!searchInfo) {
             return res.status(400)
                 .json({
                     message: "User info is required"
@@ -17,13 +17,13 @@ const searchUser = async (req, res) => {
                         should: [
                             {
                                 "autocomplete": {
-                                    "query": `${userInfo}`,
+                                    "query": `${searchInfo}`,
                                     "path": "description"
                                 }
                             },
                             {
                                 "autocomplete": {
-                                    "query": `${userInfo}`,
+                                    "query": `${searchInfo}`,
                                     "path": "fullName"
                                 }
                             }
@@ -58,36 +58,36 @@ const searchUser = async (req, res) => {
             }
         ])
 
-        // const blog = await BlogPost.aggregate([
-        //     {
-        //         $search: {
-        //             compound: {
-        //                 should: [
-        //                     {
-        //                         "autocomplete": {
-        //                             "query": `${userInfo}`,
-        //                             "path": "title"
-        //                         }
-        //                     },
-        //                     {
-        //                         "autocomplete": {
-        //                             "query": `${userInfo}`,
-        //                             "path": "content"
-        //                         }
-        //                     }
-        //                 ]
-        //             }
-        //         }
-        //     },
-        //     {
-        //         $project: {
-        //             title: 1,
-        //             slug : 1,
-        //             _id: 0
-        //         }
-        //     }
-        // ])
-        const blog = []
+        const blog = await BlogPost.aggregate([
+            {
+                $search: {
+                    compound: {
+                        should: [
+                            {
+                                "autocomplete": {
+                                    "query": `${searchInfo}`,
+                                    "path": "title"
+                                }
+                            },
+                            {
+                                "autocomplete": {
+                                    "query": `${searchInfo}`,
+                                    "path": "content"
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                $project: {
+                    title: 1,
+                    slug : 1,
+                    _id: 0
+                }
+            }
+        ])
+        // const blog = []
 
         if (!user?.length && !blog.length) {
             return res.status(400)
