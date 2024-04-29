@@ -375,6 +375,11 @@ const getBlog = async (req, res) => {
                     as: "comments",
                     pipeline: [
                         {
+                            $sort: {
+                               createdAt: -1
+                            }
+                        },
+                        {
                             $lookup: {
                                 from: "users",
                                 localField: "user",
@@ -408,6 +413,7 @@ const getBlog = async (req, res) => {
                     title: 1,
                     content: 1,
                     createdAt: 1,
+                    slug: 1,
                     "featuredImage.public_id": 1,
                     "owner.fullName": 1,
                     "owner.userName": 1,

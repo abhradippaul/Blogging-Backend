@@ -251,11 +251,42 @@ const getUser = async (req, res) => {
   }
 }
 
+const updateUser = async (req, res) => {
+  try {
+    const { userName } = req.params
+    const userInfo = req.body
+    if (!userName) {
+      return res.status(400)
+        .json({ message: 'User name is required' });
+    }
+    if (!userInfo?.fullName && !userInfo?.description) {
+      return res.status(400)
+        .json({ message: 'User name and description are required' });
+    }
+    const user = await User.findOneAndUpdate(
+      { userName: userName },
+      { $set: userInfo },
+      { new: true }
+    )
+    if (!user) {
+      return res.status(400)
+        .json({ message: 'User not found' });
+    }
+    return res.status(200).json({
+      message: 'User updated successfully',
+      success: true
+    })
+  } catch (err) {
+    return res.status(500)
+      .json({ message: 'Internal server error' });
+  }
+}
+
 const followChannel = async (req, res) => {
   try {
     const { _id: user } = req.user
     const { channelId } = req.params
-    
+
     if (!channelId || !user) {
       return res.status(400)
         .json({ message: 'Channel and user are required' });
@@ -383,5 +414,6 @@ module.exports = {
   followChannel,
   unfollowChannel,
   getUser,
-  getFollowing
+  getFollowing,
+  updateUser
 }

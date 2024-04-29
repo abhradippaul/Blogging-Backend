@@ -106,6 +106,7 @@ const updateBlogComment = async (req, res) => {
     try {
         const { id } = req.params
         const { comment } = req.body
+        
         if (!id) {
             return res.status(400)
                 .json({ error: "Comment Id is missing" });
